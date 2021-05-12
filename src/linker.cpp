@@ -189,12 +189,7 @@ void composeGlobalDefinitionTable(){
     }
 }
 
-void beginLinking(ifstream &inFile, string outputFileName, int argNum){
-    string rawFileName = outputFileName.substr(0, outputFileName.find(".obj"));
-        
-    if(!outputFileName.empty()){
-        outputFileName = rawFileName + ".out"; 
-    }
+void beginLinking(ifstream &inFile){
     
     composeProgramTable(inFile);
     composeGlobalDefinitionTable();
@@ -202,12 +197,72 @@ void beginLinking(ifstream &inFile, string outputFileName, int argNum){
     cout << "Linking Complete" <<endl;
 } 
 
-void runLinking() {
-    // Iterate trough the files 
-    // for(auto i : completeCode.programTable){
-    //     for(auto j : i.categorizedLineList){
-    //         j.lineContent
+
+bool isNumber(const std::string &s) {
+    return !s.empty() && std::all_of(s.begin(), s.end(), ::isdigit);
+}
+
+void changeRelativeAddress(vector<string> use, vector<string> &executableCode, int whichFile){
+    string auxVarName;
+    // Safety measure
+    if(use.size() == 3){
+        auxVarName = use.at(1);  
+        // We get where the code is used
+        // Removes "+"
+        string auxStr = use.back().substr(0, use.size()-1);
+
+        int useAddress = stoi(auxStr) + completeCode.programTable.at(whichFile).correctionFactor;
+        // executableCode.at()(useAddress)
+        for(auto i : completeCode.globalDefinitionTable){
+            if(auxVarName == i.name){
+                executableCode.at(useAddress) = std::to_string(i.cfPc);
+                break;
+            }
+        }
+    }
+    else{
+        cout << "Oh no, something that should never have happenned, happened, contact code author aka github.com/gabuvns\n" <<endl;
+    }
+    
+}
+string runLinking() {
+    // Iterate trough uses 
+    vector<string> executableCode;
+    for(auto  &i : completeCode.programTable){
+        for(auto  &j : i.categorizedLineList){
+            if(j.lineType == text){
+                for(auto &k : j.lineContent){
+                    if(isNumber(k)){
+                        executableCode.push_back(k);                        
+                    }
+                }          
+            }
+        }
+    }
+    int whichFile =0;
+    for(auto  &i : completeCode.programTable){
+        for(auto  &j : i.categorizedLineList){
+            if(j.lineType == use){
+                // Send the x+ where the variable is used
+                changeRelativeAddress(j.lineContent, executableCode, whichFile);
+            }
+        }
+        whichFile++;
+    }
+    // Finally create the outpput string
+    string outputCode;
+    int sizeCounter = 0;
+    for(auto i : executableCode){
+        if(sizeCounter != executableCode.size()-1){
+            outputCode+= i;
+            outputCode+= " ";
+        }
+        else{
+            outputCode+=i;
             
-    //     }
-    // } 
+        }
+        sizeCounter++;
+        
+    }
+    return outputCode;
 }

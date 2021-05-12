@@ -48,7 +48,7 @@ struct CompleteCode{
     // program table are the files
     vector<ProgramTable> programTable;
     vector<Variable> globalDefinitionTable;
-    string executableCode;
+    vector<string> executableCode;
     // Each element will indicate the necessary correctionfFIl
     // For each program
 };

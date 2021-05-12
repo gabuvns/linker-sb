@@ -6,6 +6,6 @@ using std::ifstream;
 using std::string;
 using std::vector;
 
-void beginLinking(ifstream &inFile, string outputFileName, int argNum);
-void runLinking();
+void beginLinking(ifstream &inFile);
+string runLinking();
 #endif
