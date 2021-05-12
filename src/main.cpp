@@ -14,14 +14,15 @@ using std::string;
 
 
 void createExecutableFile(string finalCode, string fileName){
-    cout << fileName <<endl;
+    cout << "Output File Name: " << fileName <<endl;
     if(!fileName.empty()){
         fileName = fileName + ".out"; 
     }
     std::ofstream outputFile;
     outputFile.open(fileName);
     outputFile << finalCode;
-    cout << finalCode <<endl;
+    
+    cout << "Outputed code: " <<finalCode <<endl;
     outputFile.close();
 }
 int main(int argc, char **argv) {

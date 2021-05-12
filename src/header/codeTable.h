@@ -44,11 +44,15 @@ struct Variable{
     int cfPc = 0;
 } ;
 
+struct ExecutableCode{
+    string text;
+    int hasBeenModified = 0;
+};
 struct CompleteCode{
     // program table are the files
     vector<ProgramTable> programTable;
     vector<Variable> globalDefinitionTable;
-    vector<string> executableCode;
+    vector<ExecutableCode> executableCode;
     // Each element will indicate the necessary correctionfFIl
     // For each program
 };

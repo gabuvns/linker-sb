@@ -120,10 +120,6 @@ int getTotalSize(ProgramTable auxProgramTable){
     // We know size will always be the second element on the header, the third element is text only size, from there we can get where data begins
     return stoi(auxProgramTable.categorizedLineList.at(1).lineContent.at(1));
 }
-int getTextSize(ProgramTable auxProgramTable){
-    // We know size will always be the second element on the header, the third element is text only size, from there we can get where data begins
-    return stoi(auxProgramTable.categorizedLineList.at(1).lineContent.at(2));
-}
 
 // Adds correctionFactor to completeCode based on each file size;
 int getCorrectionFactor(){
@@ -131,7 +127,7 @@ int getCorrectionFactor(){
     // If not empty indicates it is not the first code
     if(!completeCode.programTable.empty()){
         // We set cf as 1 because we want to get the next avaiable address
-        cf = 1;
+        cf = 0;
         for(auto i : completeCode.programTable){
             cf+=i.totalSize;   
         }
@@ -159,11 +155,9 @@ void composeProgramTable(ifstream &inFile){
         
     }
     int totalSize = getTotalSize(auxProgramTable); 
-    int textSize =  getTextSize(auxProgramTable); 
     
     auxProgramTable.totalSize = totalSize;   
-    auxProgramTable.textSize = textSize;   
-    auxProgramTable.dataSize = totalSize - textSize;
+    
     // We sum 1 because it must indicate the next address of the code
     auxProgramTable.correctionFactor = getCorrectionFactor();
     completeCode.programTable.push_back(auxProgramTable);  
@@ -190,7 +184,6 @@ void composeGlobalDefinitionTable(){
 }
 
 void beginLinking(ifstream &inFile){
-    
     composeProgramTable(inFile);
     composeGlobalDefinitionTable();
     
@@ -202,9 +195,8 @@ bool isNumber(const std::string &s) {
     return !s.empty() && std::all_of(s.begin(), s.end(), ::isdigit);
 }
 
-void changeRelativeAddress(vector<string> use, vector<string> &executableCode, int whichFile){
+void changeUseAddress(vector<string> use, vector<ExecutableCode> &executableCode, int whichFile){
     string auxVarName;
-    // Safety measure
     if(use.size() == 3){
         auxVarName = use.at(1);  
         // We get where the code is used
@@ -212,10 +204,11 @@ void changeRelativeAddress(vector<string> use, vector<string> &executableCode, i
         string auxStr = use.back().substr(0, use.size()-1);
 
         int useAddress = stoi(auxStr) + completeCode.programTable.at(whichFile).correctionFactor;
-        // executableCode.at()(useAddress)
         for(auto i : completeCode.globalDefinitionTable){
             if(auxVarName == i.name){
-                executableCode.at(useAddress) = std::to_string(i.cfPc);
+                // We do this so we don't replicate
+                executableCode.at(useAddress).hasBeenModified = 1;
+                executableCode.at(useAddress).text = std::to_string(i.cfPc);
                 break;
             }
         }
@@ -225,15 +218,34 @@ void changeRelativeAddress(vector<string> use, vector<string> &executableCode, i
     }
     
 }
+
+void changeAddress(string relBits, vector<ExecutableCode> &executableCode, int whichFile){
+    // Safety measure
+    for(int i = 0; i < relBits.size(); i++){
+        // If 1 then it is relative address
+        int dontChangeAgain =0;
+        int tmpCf = completeCode.programTable.at(whichFile).correctionFactor;
+        if(relBits.at(i) == '1' && !executableCode.at(i+tmpCf).hasBeenModified){
+                int auxInt =stoi(executableCode.at(i+tmpCf).text); 
+                auxInt+=tmpCf;
+                executableCode.at(i+tmpCf).text = std::to_string(auxInt);
+            
+            
+        }
+    }
+    
+}
 string runLinking() {
     // Iterate trough uses 
-    vector<string> executableCode;
+    vector<ExecutableCode> executableCode;
     for(auto  &i : completeCode.programTable){
         for(auto  &j : i.categorizedLineList){
             if(j.lineType == text){
                 for(auto &k : j.lineContent){
                     if(isNumber(k)){
-                        executableCode.push_back(k);                        
+                        ExecutableCode aux;
+                        aux.text = k;
+                        executableCode.push_back(aux);                        
                     }
                 }          
             }
@@ -244,7 +256,16 @@ string runLinking() {
         for(auto  &j : i.categorizedLineList){
             if(j.lineType == use){
                 // Send the x+ where the variable is used
-                changeRelativeAddress(j.lineContent, executableCode, whichFile);
+                changeUseAddress(j.lineContent, executableCode, whichFile);
+            }
+        }
+        whichFile++;
+    }
+    whichFile = 0;
+    for(auto  &i : completeCode.programTable){
+        for(auto &j :i.categorizedLineList){
+            if(j.lineType == relocation){
+                changeAddress(j.lineContent.at(1), executableCode, whichFile);
             }
         }
         whichFile++;
@@ -254,11 +275,11 @@ string runLinking() {
     int sizeCounter = 0;
     for(auto i : executableCode){
         if(sizeCounter != executableCode.size()-1){
-            outputCode+= i;
+            outputCode+= i.text;
             outputCode+= " ";
         }
         else{
-            outputCode+=i;
+            outputCode+=i.text;
             
         }
         sizeCounter++;
